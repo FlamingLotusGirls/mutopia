@@ -6,9 +6,14 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-// WiFi settings
-const char* ssid = "Athenaeum";
-const char* password = "community";
+#include "credentials.h"
+// create your own credentials.h file with the following format:
+//
+// #define WIFI_SSID "Your SSID Here"
+// #define WIFI_PWD "Your WiFi Password Here"
+ 
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PWD;
 
 // UDP settings
 WiFiUDP udp;
@@ -32,7 +37,7 @@ const int proximitySensorAddress = 0x29;
 
 // LED strip settings
 const int ledPin = 13;
-const int stripLength = 30;
+const int stripLength = 12;
 Adafruit_NeoPixel strip(stripLength, ledPin, NEO_GRB + NEO_KHZ800);
 
 // Triple buffering for LED color data
@@ -260,7 +265,7 @@ void sendPacket(String dataToSend) {
 
   // Send UDP packet
   udp.beginPacket(remoteIP, remotePort);
-  udp.write(dataToSend.c_str());
+  udp.print(dataToSend.c_str());
   udp.endPacket();
 }
 
@@ -295,7 +300,7 @@ void coreTask1_LED(void* pvParameters) {
       }
 
       // Interpolation
-      float interpolationFactor = min(1.0, float(currentTime - lastFrameTime) / float(1000 / frameRate));
+      float interpolationFactor = min((float)1.0, float(currentTime - lastFrameTime) / float(1000 / frameRate));
 
       for (int i = 0; i < stripLength; i++) {
         uint8_t activeRed = (activeBuffer[i] >> 16) & 0xFF;
@@ -376,7 +381,7 @@ uint32_t analogousColor(uint32_t color, int angle) {
     if (t > 1) t -= 1;
     if (t < 1 / 6.0) return p + (q - p) * 6 * t;
     if (t < 1 / 2.0) return q;
-    if (t < 2 / 3.0) return p + (q - p) * (2 / 3.0 - t) * 6;
+    if (t < 2 / 3.0) return p + (q - p) * (2 / (float)3.0 - t) * 6;
     return p;
   };
 
@@ -420,12 +425,18 @@ void initLedStripColors() {
 
 
 // Fallback mode pattern generation
-// void generateFallbackPattern() {
-//   for (int i = 0; i < stripLength; i++) {
-//     // Create a hash of the sensor values
-//     int hashValue = (digitalRead(buttonPin) * proximitySensor.read()) % 16777216;
-//     uint32_t color = hashValue | (hashValue << 8) | (hashValue << 16);
-//     strip.setPixelColor(i, color);
-//   }
-//   strip.show();
-// }
+void generateFallbackPattern() {
+   for (int i = 0; i < stripLength; i++) {
+     // Create a hash of the sensor values
+     // int hashValue = (digitalRead(buttonPin) * proximitySensor.read()) % 16777216;
+     //uint32_t color = hashValue | (hashValue << 8) | (hashValue << 16);
+     // For now, just set LEDs to a solid color for PoC
+     uint32_t color = 255 | (0 << 8) | (0 << 16);
+     strip.setPixelColor(i, color);
+   }
+   strip.show();
+}
+
+void loop() {
+  
+}
