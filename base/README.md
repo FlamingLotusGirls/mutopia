@@ -1,2 +1,2 @@
 # mutopia base
-Mostly python code for the utopia base station computer
+Mostly python code for the Mutopia base station computer
