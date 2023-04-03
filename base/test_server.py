@@ -23,7 +23,7 @@ class Node:
             self.strip.append([0,0,0])
     def update(self):
         self.seq_num += 1
-        data = MSG_PFX + self.seq_num.to_bytes(2,'big') + b'P' + self.length.to_bytes(2,'big')
+        data = MSG_PFX + self.seq_num.to_bytes(4,'big') + b'P' + self.length.to_bytes(2,'big')
         for i in range(self.length):
             data += self.strip[i][0].to_bytes(1, 'big') # big or little doesn't matter
             data += self.strip[i][1].to_bytes(1, 'big') # big or little doesn't matter

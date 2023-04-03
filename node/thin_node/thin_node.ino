@@ -92,7 +92,7 @@ void pixelMsg(char *payload) {
 
 unsigned long lastRegisterTime = 0;
 char packetBuffer[udpBufferSize]; //buffer to hold incoming packet
-int lastSeqNum = 0;
+long lastSeqNum = 0; // would have prefered unsigned long, but python doesn't have unsigned ints
 
 void readMsg() {
   int len = udp.read(packetBuffer, udpBufferSize);
@@ -102,7 +102,11 @@ void readMsg() {
     Serial.println("ERROR packet received with invalid signature");
     return;
   }
-  int seqNum = packetBuffer[3] * 255 + packetBuffer[4];  
+  long seqNum = 0;
+  seqNum += (long)packetBuffer[3] << 24;  
+  seqNum += (long)packetBuffer[4] << 16;  
+  seqNum += (long)packetBuffer[5] << 8;  
+  seqNum += (long)packetBuffer[6];  
 
   if (seqNum < lastSeqNum) {
     Serial.println("WARNING: dropping out of sequence packet");
@@ -120,8 +124,8 @@ void readMsg() {
   }
   lastSeqNum = seqNum;
 
-  char msgType = packetBuffer[5];
-  char *payload = packetBuffer + 6;
+  char msgType = packetBuffer[7];
+  char *payload = packetBuffer + 8;
 
   switch (msgType) {
     case 'P':
