@@ -12,9 +12,9 @@ const char *ssid = "TP-Link_81DC";
 const char *password = "18585223";
 
 // Neopixel settings
-const int numPixels = 240;
+const int numPixels = 30;
 const int numberOfChannels = numPixels * 3; // Total number of channels you want to receive (1 led = 3 channels)
-const byte dataPin = 10;
+const byte dataPin = 4;
 Adafruit_NeoPixel leds = Adafruit_NeoPixel(numPixels, dataPin, NEO_GRB + NEO_KHZ800);
 
 // Artnet settings
