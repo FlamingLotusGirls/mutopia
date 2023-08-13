@@ -11,9 +11,9 @@ play_objects = {}
 
 # Configurable settings
 wav_directory = "/home/mutopia/wav"  # Default directory path containing WAV files
-random_idle_time = 30  # Configurable time in seconds before playing random sounds
-min_random_delay = 5  # Minimum delay before playing random sounds in seconds
-max_random_delay = 20  # Maximum delay before playing random sounds in seconds
+random_idle_time = 60  # Configurable time in seconds before playing random sounds
+min_random_delay = 15  # Minimum delay before playing random sounds in seconds
+max_random_delay = 60  # Maximum delay before playing random sounds in seconds
 
 # Lock for handling random sound playback
 random_play_lock = threading.Lock()
