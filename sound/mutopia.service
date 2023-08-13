@@ -1,0 +1,12 @@
+[Unit]
+Description=Mutopia Sounds Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/mutopia/mutopia/sound/sounds.py
+WorkingDirectory=/home/mutopia/mutopia/sound
+Restart=always
+User=mutopia
+
+[Install]
+WantedBy=multi-user.target
