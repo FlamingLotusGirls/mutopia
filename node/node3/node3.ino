@@ -48,6 +48,9 @@ const int INIT_COLORS[] = {
 
 void setup()
 {
+  Serial.begin(115200);
+  Serial.println("");
+  Serial.println("FLG Mutopia LED Node");
   for (int i = 0; i < STRIP_COUNT; i++)
   {
     strips[i].begin();
@@ -80,6 +83,21 @@ void loop()
 
     break;
   case TRY_WIFI:
+    Serial.print("Searching for WiFi");
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED)
+    {
+      Serial.print(".");
+      delay(200);
+    }
+    Serial.println("");
+    Serial.print("Connected to \"");
+    Serial.print(ssid);
+    Serial.print("\", IP address: ");
+    Serial.println(WiFi.localIP());
+    while (true)
+    {
+    }
     break;
   }
 }
