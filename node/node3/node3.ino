@@ -34,7 +34,17 @@ enum State
 };
 
 State state = INIT;
-int remainingInitFrames = 100;
+int currentInitColor = 0;
+
+const int INIT_COLOR_COUNT = 6;
+const int INIT_COLORS[] = {
+    0x81380E,
+    0xE38D52,
+    0x2CD3E1,
+    0x3CBD9F,
+    0x005A96,
+    0xE8689E,
+};
 
 void setup()
 {
@@ -51,18 +61,18 @@ void loop()
   case INIT:
     for (int i = 0; i < STRIP_COUNT; i++)
     {
-      strips[i].fill(0xff0000);
+      strips[i].fill(INIT_COLORS[currentInitColor]);
       strips[i].show();
     }
 
-    remainingInitFrames--;
-    delay(10);
+    delay(500);
 
-    if (remainingInitFrames == 0)
+    currentInitColor++;
+    if (currentInitColor == INIT_COLOR_COUNT)
     {
       for (int i = 0; i < STRIP_COUNT; i++)
       {
-        strips[i].fill(0x00ff00);
+        strips[i].fill(INIT_COLORS[4]);
         strips[i].show();
       }
       state = TRY_WIFI;
