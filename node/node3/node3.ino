@@ -2,6 +2,9 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
+IPAddress ip(192, 168, 0, 100);
+IPAddress gateway(192, 168, 0, 1);
+IPAddress subnet(255, 255, 0, 0);
 const char *ssid = "mutopia";
 const char *password = "flgflgflg";
 
@@ -87,6 +90,8 @@ void loop()
   case TRY_WIFI:
     Serial.print("Searching for WiFi");
     WiFi.begin(ssid, password);
+    WiFi.config(ip, gateway, subnet);
+
     while (WiFi.status() != WL_CONNECTED)
     {
       Serial.print(".");
@@ -95,8 +100,11 @@ void loop()
     Serial.println("");
     Serial.print("Connected to \"");
     Serial.print(ssid);
-    Serial.print("\", IP address: ");
+    Serial.println("\"");
+    Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
+    Serial.print("RSSI Strength: ");
+    Serial.println(WiFi.RSSI());
 
     // Confirm WiFi connected with pink LED flashes
     for (int j = 3; j > 0; j--)
