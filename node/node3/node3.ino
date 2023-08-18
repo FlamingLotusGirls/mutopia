@@ -30,7 +30,8 @@ Adafruit_NeoPixel strips[] = {
 enum State
 {
   INIT,
-  TRY_WIFI
+  TRY_WIFI,
+  RECEIVE_ARTNET
 };
 
 State state = INIT;
@@ -73,6 +74,7 @@ void loop()
     currentInitColor++;
     if (currentInitColor == INIT_COLOR_COUNT)
     {
+      // Navigate to TRY_WIFI state
       for (int i = 0; i < STRIP_COUNT; i++)
       {
         strips[i].fill(INIT_COLORS[4]);
@@ -95,9 +97,34 @@ void loop()
     Serial.print(ssid);
     Serial.print("\", IP address: ");
     Serial.println(WiFi.localIP());
-    while (true)
+
+    // Confirm WiFi connected with pink LED flashes
+    for (int j = 3; j > 0; j--)
     {
+      for (int i = 0; i < STRIP_COUNT; i++)
+      {
+        strips[i].fill(0xE8689E);
+        strips[i].show();
+      }
+      delay(100);
+      for (int i = 0; i < STRIP_COUNT; i++)
+      {
+        strips[i].fill(0x35081B);
+        strips[i].show();
+      }
+      delay(100);
     }
+    for (int i = 0; i < STRIP_COUNT; i++)
+    {
+      strips[i].fill(0x81380E);
+      strips[i].show();
+    }
+    delay(100);
+
+    // Navigate to RECEIVE_ARTNET state
+    state = RECEIVE_ARTNET;
+    break;
+  case RECEIVE_ARTNET:
     break;
   }
 }
