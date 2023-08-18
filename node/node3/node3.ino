@@ -9,7 +9,7 @@ const char *ssid = "mutopia";
 const char *password = "flgflgflg";
 
 #define STRIP_COUNT 8
-#define STRIP_LENGTH 180
+#define STRIP_LENGTH 720
 
 #define PIN1 4
 #define PIN2 5
