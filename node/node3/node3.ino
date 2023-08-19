@@ -16,7 +16,8 @@ const char *password = "flgflgflg";
 struct Strip
 {
   Adafruit_NeoPixel pixels;
-  uint8_t sequenceBeingReceived = 0;
+  bool universesReceived[STRIP_LENGTH / PIXELS_PER_UNIV] = {false};
+  int maxUniverseReceived = 0;
   Strip(int len, int pin, int flags) : pixels(len, pin, flags) {}
 };
 
@@ -200,8 +201,8 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
     Serial.println("stripIndex too high");
     return;
   }
-  int subStripIndex = universe % UNIV_PERIOD;
-  int startPixel = subStripIndex * PIXELS_PER_UNIV;
+  int stripUniverse = universe % UNIV_PERIOD;
+  int startPixel = stripUniverse * PIXELS_PER_UNIV;
   if (startPixel >= STRIP_LENGTH)
   {
     Serial.println("startPixel too high");
@@ -209,44 +210,35 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   }
 
   Strip &strip = strips[stripIndex];
+  strip.maxUniverseReceived = max(strip.maxUniverseReceived, stripUniverse);
+  strip.universesReceived[stripUniverse] = true;
 
-  // MAYBE SHOW THIS STRIP & START LISTENING TO NEW SEQUENCE
-  // The following if-statement makes sure that sequence is "above" sequenceBeingReceived, in a
-  // wraparound sense. If sequence is "below" sequenceBeingReceived, we received an old frame so we
-  // will ignore it.
-  // Examples:
-  //   If new sequence is "lower" by 1, sequence - strip.sequenceBeingReceived will be 255.
-  //   If new sequence is "higher" by 1, sequence - strip.sequenceBeingReceived will be 1.
-  uint8_t sequenceDiff = sequence - strip.sequenceBeingReceived;
-  if (sequenceDiff > 0 && sequenceDiff < 128) // kinda like if sequenceDiff was signed and we did sequenceDiff >= 1
+  // STORE ARTNET DATA INTO PIXEL COLORS
+  // Sometimes the received length isn't a multiple of 3 (e.g. Chromatik seems to always send an
+  // even length and pad the buffer with a zero if pixel count is odd).
+  int numPixelsReceivedThisFrame = length / 3;
+
+  for (size_t receivedPixelIndex = 0;
+       receivedPixelIndex < numPixelsReceivedThisFrame;
+       receivedPixelIndex++)
   {
-    // First frame of the new sequence; assume we've received all the frames of the previous
-    // sequence so show them and start listening for the new sequence.
-    strip.pixels.show();
-    strip.sequenceBeingReceived = sequence;
+    size_t pixelStartInData = receivedPixelIndex * 3;
+    strip.pixels.setPixelColor(
+        startPixel + receivedPixelIndex,
+        data[pixelStartInData],
+        data[pixelStartInData + 1],
+        data[pixelStartInData + 2]);
   }
 
-  // STORE ARTNET DATA INTO PIXEL COLORS FOR CURRENT SEQUENCE
-  if (sequence == strip.sequenceBeingReceived)
+  // SHOW THIS STRIP IF WE HAVE RECEIVED AT LEAST ONE OF EACH UNIVERSE
+  for (int i = 0; i <= strip.maxUniverseReceived; i++)
   {
-    // Sometimes the received length isn't a multiple of 3 (e.g. Chromatik seems to always send an
-    // even length and pad the buffer with a zero if pixel count is odd).
-    int numPixelsReceivedThisFrame = length / 3;
-
-    for (size_t receivedPixelIndex = 0;
-         receivedPixelIndex < numPixelsReceivedThisFrame;
-         receivedPixelIndex++)
+    if (!strip.universesReceived[i])
     {
-      size_t pixelStartInData = receivedPixelIndex * 3;
-      strip.pixels.setPixelColor(
-          startPixel + receivedPixelIndex,
-          data[pixelStartInData],
-          data[pixelStartInData + 1],
-          data[pixelStartInData + 2]);
+      return;
     }
   }
-  else
-  {
-    Serial.println("Sequence went down");
-  }
+
+  strip.pixels.show();
+  memset(strip.universesReceived, 0, strip.maxUniverseReceived + 1);
 }
