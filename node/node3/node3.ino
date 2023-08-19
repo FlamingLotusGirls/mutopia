@@ -196,14 +196,12 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   int stripIndex = universe / UNIV_PERIOD;
   if (stripIndex >= STRIP_COUNT)
   {
-    Serial.println("stripIndex too high");
     return;
   }
   int stripUniverse = universe % UNIV_PERIOD;
   int startPixel = stripUniverse * PIXELS_PER_UNIV;
   if (startPixel >= STRIP_LENGTH)
   {
-    Serial.println("startPixel too high");
     return;
   }
 
