@@ -16,8 +16,6 @@ const char *password = "flgflgflg";
 struct Strip
 {
   Adafruit_NeoPixel pixels;
-  bool universesReceived[STRIP_LENGTH / PIXELS_PER_UNIV] = {false};
-  int maxUniverseReceived = 0;
   Strip(int len, int pin, int flags) : pixels(len, pin, flags) {}
 };
 
@@ -210,8 +208,19 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   }
 
   Strip &strip = strips[stripIndex];
-  strip.maxUniverseReceived = max(strip.maxUniverseReceived, stripUniverse);
-  strip.universesReceived[stripUniverse] = true;
+
+  // MAYBE SHOW
+  // Simply show if we receive a 0 universe, that way on average we will show once per strip.
+  // This way of deciding when to show may seem naive, but upon testing, perceptually, it performs
+  // as well or better than a few smarter algorithms (while smarter algorithms can be more sure
+  // that the same frame data is being shown at the same time, it often comes at the cost of frame
+  // drops). This way also just has fewer failure cases.
+  // We show before storing the new pixel data because, if we receive frames in the right order,
+  // each 0 universe will mean we are done receiving the previous frame's data.
+  if (stripUniverse == 0)
+  {
+    strip.pixels.show();
+  }
 
   // STORE ARTNET DATA INTO PIXEL COLORS
   // Sometimes the received length isn't a multiple of 3 (e.g. Chromatik seems to always send an
@@ -229,16 +238,4 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
         data[pixelStartInData + 1],
         data[pixelStartInData + 2]);
   }
-
-  // SHOW THIS STRIP IF WE HAVE RECEIVED AT LEAST ONE OF EACH UNIVERSE
-  for (int i = 0; i <= strip.maxUniverseReceived; i++)
-  {
-    if (!strip.universesReceived[i])
-    {
-      return;
-    }
-  }
-
-  strip.pixels.show();
-  memset(strip.universesReceived, 0, strip.maxUniverseReceived + 1);
 }
