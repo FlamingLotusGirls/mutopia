@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
-IPAddress ip(192, 168, 0, 100);
+IPAddress ip(192, 168, 0, 200);
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 0, 0);
 const char *ssid = "mutopia";
@@ -10,6 +10,15 @@ const char *password = "flgflgflg";
 
 #define STRIP_COUNT 8
 #define STRIP_LENGTH 720
+#define UNIV_PERIOD 10
+#define PIXELS_PER_UNIV 170
+
+struct Strip
+{
+  Adafruit_NeoPixel pixels;
+  uint8_t sequenceBeingReceived = 0;
+  Strip(int len, int pin, int flags) : pixels(len, pin, flags) {}
+};
 
 #define PIN1 4
 #define PIN2 5
@@ -20,15 +29,17 @@ const char *password = "flgflgflg";
 #define PIN7 7
 #define PIN8 44
 
-Adafruit_NeoPixel strips[] = {
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN1, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN2, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN3, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN4, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN5, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN6, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN7, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN8, NEO_RGB + NEO_KHZ800)};
+Strip strips[] = {
+    Strip(STRIP_LENGTH, PIN1, NEO_RGB + NEO_KHZ800),
+    Strip(STRIP_LENGTH, PIN2, NEO_RGB + NEO_KHZ800),
+    Strip(STRIP_LENGTH, PIN3, NEO_RGB + NEO_KHZ800),
+    Strip(STRIP_LENGTH, PIN4, NEO_RGB + NEO_KHZ800),
+    Strip(STRIP_LENGTH, PIN5, NEO_RGB + NEO_KHZ800),
+    Strip(STRIP_LENGTH, PIN6, NEO_RGB + NEO_KHZ800),
+    Strip(STRIP_LENGTH, PIN7, NEO_RGB + NEO_KHZ800),
+    Strip(STRIP_LENGTH, PIN8, NEO_RGB + NEO_KHZ800)};
+
+ArtnetWifi artnet;
 
 enum State
 {
@@ -57,19 +68,26 @@ void setup()
   Serial.println("FLG Mutopia LED Node");
   for (int i = 0; i < STRIP_COUNT; i++)
   {
-    strips[i].begin();
+    strips[i].pixels.begin();
   }
+}
+
+void beginWifi()
+{
+  WiFi.begin(ssid, password);
+  WiFi.config(ip, gateway, subnet);
 }
 
 void loop()
 {
+  int dots = 0;
   switch (state)
   {
   case INIT:
     for (int i = 0; i < STRIP_COUNT; i++)
     {
-      strips[i].fill(INIT_COLORS[currentInitColor]);
-      strips[i].show();
+      strips[i].pixels.fill(INIT_COLORS[currentInitColor]);
+      strips[i].pixels.show();
     }
 
     delay(500);
@@ -80,8 +98,8 @@ void loop()
       // Navigate to TRY_WIFI state
       for (int i = 0; i < STRIP_COUNT; i++)
       {
-        strips[i].fill(INIT_COLORS[4]);
-        strips[i].show();
+        strips[i].pixels.fill(INIT_COLORS[4]);
+        strips[i].pixels.show();
       }
       state = TRY_WIFI;
     }
@@ -89,12 +107,19 @@ void loop()
     break;
   case TRY_WIFI:
     Serial.print("Searching for WiFi");
-    WiFi.begin(ssid, password);
-    WiFi.config(ip, gateway, subnet);
+    beginWifi();
 
     while (WiFi.status() != WL_CONNECTED)
     {
       Serial.print(".");
+      if (++dots == 20)
+      {
+        dots = 0;
+        Serial.println("");
+        Serial.print("Status: ");
+        Serial.println(WiFi.status());
+        beginWifi();
+      }
       delay(200);
     }
     Serial.println("");
@@ -111,28 +136,117 @@ void loop()
     {
       for (int i = 0; i < STRIP_COUNT; i++)
       {
-        strips[i].fill(0xE8689E);
-        strips[i].show();
+        strips[i].pixels.fill(0xE8689E);
+        strips[i].pixels.show();
       }
       delay(100);
       for (int i = 0; i < STRIP_COUNT; i++)
       {
-        strips[i].fill(0x35081B);
-        strips[i].show();
+        strips[i].pixels.fill(0x35081B);
+        strips[i].pixels.show();
       }
       delay(100);
     }
     for (int i = 0; i < STRIP_COUNT; i++)
     {
-      strips[i].fill(0x81380E);
-      strips[i].show();
+      strips[i].pixels.fill(0x81380E);
+      strips[i].pixels.show();
     }
     delay(100);
 
     // Navigate to RECEIVE_ARTNET state
+    artnet.begin();
+    artnet.setArtDmxCallback(onDmxFrame);
     state = RECEIVE_ARTNET;
     break;
   case RECEIVE_ARTNET:
+    artnet.read();
     break;
+  }
+}
+
+void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *data)
+{
+  // Serial.print("DMX: Univ: ");
+  // Serial.print(universe, DEC);
+  // Serial.print(", Seq: ");
+  // Serial.print(sequence, DEC);
+  // Serial.print(", Length: ");
+  // Serial.print(length, DEC);
+  // Serial.print("; ");
+  // bool limitPrintLength = false;
+  // uint16_t printLength = length;
+  // if (length > 16)
+  // {
+  //   printLength = 16;
+  //   limitPrintLength = true;
+  // }
+  // // Print the buffer
+  // for (int i = 0; i < printLength; i++)
+  // {
+  //   Serial.print(data[i], HEX);
+  //   Serial.print(" ");
+  // }
+  // if (limitPrintLength)
+  // {
+  //   Serial.print("...");
+  // }
+  // Serial.println();
+
+  // FIGURE OUT WHICH STRIP & WHETHER WE HAVE PIXELS THAT CAN DISPLAY THIS FRAME
+  int stripIndex = universe / UNIV_PERIOD;
+  if (stripIndex >= STRIP_COUNT)
+  {
+    Serial.println("stripIndex too high");
+    return;
+  }
+  int subStripIndex = universe % UNIV_PERIOD;
+  int startPixel = subStripIndex * PIXELS_PER_UNIV;
+  if (startPixel >= STRIP_LENGTH)
+  {
+    Serial.println("startPixel too high");
+    return;
+  }
+
+  Strip &strip = strips[stripIndex];
+
+  // MAYBE SHOW THIS STRIP & START LISTENING TO NEW SEQUENCE
+  // The following if-statement makes sure that sequence is "above" sequenceBeingReceived, in a
+  // wraparound sense. If sequence is "below" sequenceBeingReceived, we received an old frame so we
+  // will ignore it.
+  // Examples:
+  //   If new sequence is "lower" by 1, sequence - strip.sequenceBeingReceived will be 255.
+  //   If new sequence is "higher" by 1, sequence - strip.sequenceBeingReceived will be 1.
+  uint8_t sequenceDiff = sequence - strip.sequenceBeingReceived;
+  if (sequenceDiff > 0 && sequenceDiff < 128) // kinda like if sequenceDiff was signed and we did sequenceDiff >= 1
+  {
+    // First frame of the new sequence; assume we've received all the frames of the previous
+    // sequence so show them and start listening for the new sequence.
+    strip.pixels.show();
+    strip.sequenceBeingReceived = sequence;
+  }
+
+  // STORE ARTNET DATA INTO PIXEL COLORS FOR CURRENT SEQUENCE
+  if (sequence == strip.sequenceBeingReceived)
+  {
+    // Sometimes the received length isn't a multiple of 3 (e.g. Chromatik seems to always send an
+    // even length and pad the buffer with a zero if pixel count is odd).
+    int numPixelsReceivedThisFrame = length / 3;
+
+    for (size_t receivedPixelIndex = 0;
+         receivedPixelIndex < numPixelsReceivedThisFrame;
+         receivedPixelIndex++)
+    {
+      size_t pixelStartInData = receivedPixelIndex * 3;
+      strip.pixels.setPixelColor(
+          startPixel + receivedPixelIndex,
+          data[pixelStartInData],
+          data[pixelStartInData + 1],
+          data[pixelStartInData + 2]);
+    }
+  }
+  else
+  {
+    Serial.println("Sequence went down");
   }
 }
