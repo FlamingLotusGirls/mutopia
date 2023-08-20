@@ -9,7 +9,7 @@ const char *ssid = "mutopia";
 const char *password = "flgflgflg";
 
 #define STRIP_COUNT 8
-#define STRIP_LENGTH 720
+#define STRIP_LENGTH 180
 #define UNIV_PERIOD 10
 #define PIXELS_PER_UNIV 170
 
@@ -186,6 +186,13 @@ void loop()
     }
 
     break;
+  case RECEIVE_ARTNET:
+    for (int i = 0; i < STRIP_COUNT; i++)
+    {
+      strips[i].pixels.show();
+    }
+
+    break;
   }
 }
 
@@ -231,19 +238,6 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   }
 
   Strip &strip = strips[stripIndex];
-
-  // MAYBE SHOW
-  // Simply show if we receive a 0 universe, that way on average we will show once per strip.
-  // This way of deciding when to show may seem naive, but upon testing, perceptually, it performs
-  // as well or better than a few smarter algorithms (while smarter algorithms can be more sure
-  // that the same frame data is being shown at the same time, it often comes at the cost of frame
-  // drops). This way also just has fewer failure cases.
-  // We show before storing the new pixel data because, if we receive frames in the right order,
-  // each 0 universe will mean we are done receiving the previous frame's data.
-  if (stripUniverse == 0)
-  {
-    strip.pixels.show();
-  }
 
   // STORE ARTNET DATA INTO PIXEL COLORS
   // Sometimes the received length isn't a multiple of 3 (e.g. Chromatik seems to always send an
