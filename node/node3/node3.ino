@@ -2,14 +2,13 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
-IPAddress ip(192, 168, 0, 200);
+IPAddress ip(192, 168, 0, 201);
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 0, 0);
 const char *ssid = "mutopia";
 const char *password = "flgflgflg";
 
 #define STRIP_COUNT 8
-#define STRIP_LENGTH 180
 #define UNIV_PERIOD 10
 #define PIXELS_PER_UNIV 170
 
@@ -23,14 +22,14 @@ const char *password = "flgflgflg";
 #define PIN8 44
 
 Adafruit_NeoPixel strips[] = {
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN1, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN2, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN3, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN4, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN5, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN6, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN7, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(STRIP_LENGTH, PIN8, NEO_RGB + NEO_KHZ800)};
+    Adafruit_NeoPixel(720, PIN1, NEO_RGB + NEO_KHZ800),
+    Adafruit_NeoPixel(240, PIN2, NEO_RGB + NEO_KHZ800),
+    Adafruit_NeoPixel(240, PIN3, NEO_RGB + NEO_KHZ800),
+    Adafruit_NeoPixel(240, PIN4, NEO_RGB + NEO_KHZ800),
+    Adafruit_NeoPixel(240, PIN5, NEO_RGB + NEO_KHZ800),
+    Adafruit_NeoPixel(240, PIN6, NEO_RGB + NEO_KHZ800),
+    Adafruit_NeoPixel(240, PIN7, NEO_RGB + NEO_KHZ800),
+    Adafruit_NeoPixel(240, PIN8, NEO_RGB + NEO_KHZ800)};
 
 ArtnetWifi artnet;
 
@@ -226,7 +225,8 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   }
   int stripUniverse = universe % UNIV_PERIOD;
   int startPixel = stripUniverse * PIXELS_PER_UNIV;
-  if (startPixel >= STRIP_LENGTH)
+  int stripNumPixels = strips[stripIndex].numPixels();
+  if (startPixel >= stripNumPixels)
   {
     return;
   }
@@ -236,6 +236,6 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   // even length and pad the buffer with a zero if pixel count is odd).
   int numPixelsReceivedThisFrame = length / 3;
 
-  int numPixelsToCopySafely = min(STRIP_LENGTH - startPixel, numPixelsReceivedThisFrame);
+  int numPixelsToCopySafely = min(stripNumPixels - startPixel, numPixelsReceivedThisFrame);
   memcpy(strips[stripIndex].getPixels() + (startPixel * 3), data, numPixelsToCopySafely * 3);
 }
