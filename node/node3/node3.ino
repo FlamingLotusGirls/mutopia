@@ -60,6 +60,8 @@ const int INIT_COLORS[] = {
     0xE8689E,
 };
 
+TaskHandle_t Core0Task;
+
 void setup()
 {
   Serial.begin(115200);
@@ -69,6 +71,22 @@ void setup()
   {
     strips[i].pixels.begin();
   }
+
+  Serial.print("setup, on core ");
+  Serial.println(xPortGetCoreID());
+
+  xTaskCreatePinnedToCore(core0Task, "Core0Task", 10000, nullptr, 0, &Core0Task, 0);
+}
+
+void core0Task(void *params)
+{
+  Serial.print("core0Task, on core ");
+  Serial.println(xPortGetCoreID());
+
+  while (true)
+  {
+    loopCore0();
+  }
 }
 
 void beginWifi()
@@ -77,33 +95,11 @@ void beginWifi()
   WiFi.config(ip, gateway, subnet);
 }
 
-void loop()
+void loopCore0()
 {
   int dots = 0;
   switch (state)
   {
-  case INIT:
-    for (int i = 0; i < STRIP_COUNT; i++)
-    {
-      strips[i].pixels.fill(INIT_COLORS[currentInitColor]);
-      strips[i].pixels.show();
-    }
-
-    delay(500);
-
-    currentInitColor++;
-    if (currentInitColor == INIT_COLOR_COUNT)
-    {
-      // Navigate to TRY_WIFI state
-      for (int i = 0; i < STRIP_COUNT; i++)
-      {
-        strips[i].pixels.fill(INIT_COLORS[4]);
-        strips[i].pixels.show();
-      }
-      state = TRY_WIFI;
-    }
-
-    break;
   case TRY_WIFI:
     Serial.print("Searching for WiFi");
     beginWifi();
@@ -160,6 +156,35 @@ void loop()
     break;
   case RECEIVE_ARTNET:
     artnet.read();
+    break;
+  }
+}
+
+void loop()
+{
+  switch (state)
+  {
+  case INIT:
+    for (int i = 0; i < STRIP_COUNT; i++)
+    {
+      strips[i].pixels.fill(INIT_COLORS[currentInitColor]);
+      strips[i].pixels.show();
+    }
+
+    delay(500);
+
+    currentInitColor++;
+    if (currentInitColor == INIT_COLOR_COUNT)
+    {
+      // Navigate to TRY_WIFI state
+      for (int i = 0; i < STRIP_COUNT; i++)
+      {
+        strips[i].pixels.fill(INIT_COLORS[4]);
+        strips[i].pixels.show();
+      }
+      state = TRY_WIFI;
+    }
+
     break;
   }
 }
