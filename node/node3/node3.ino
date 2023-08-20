@@ -244,15 +244,6 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   // even length and pad the buffer with a zero if pixel count is odd).
   int numPixelsReceivedThisFrame = length / 3;
 
-  for (size_t receivedPixelIndex = 0;
-       receivedPixelIndex < numPixelsReceivedThisFrame;
-       receivedPixelIndex++)
-  {
-    size_t pixelStartInData = receivedPixelIndex * 3;
-    strip.pixels.setPixelColor(
-        startPixel + receivedPixelIndex,
-        data[pixelStartInData],
-        data[pixelStartInData + 1],
-        data[pixelStartInData + 2]);
-  }
+  int numPixelsToCopySafely = min(STRIP_LENGTH - startPixel, numPixelsReceivedThisFrame);
+  memcpy(strip.pixels.getPixels() + (startPixel * 3), data, numPixelsToCopySafely * 3);
 }
