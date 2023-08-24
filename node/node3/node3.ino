@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
-IPAddress ip(192, 168, 0, 200);
+IPAddress ip(192, 168, 0, 201);
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 const char *ssid = "mutopia";
@@ -48,6 +48,7 @@ const int INIT_COLORS[] = {
 };
 
 TaskHandle_t WifiTaskHandle;
+TaskHandle_t RenderTaskHandle;
 
 void setup()
 {
@@ -70,6 +71,7 @@ void setup()
   // Wifi normally runs on core 0, so we are using core 0 to make sure our reading of packets is
   // synchronous with the ESP32 infra's code that receives packets.
   xTaskCreatePinnedToCore(wifiTask, "WifiTask", 10000, nullptr, 1 /* priority */, &WifiTaskHandle, 0 /* core */);
+  // xTaskCreatePinnedToCore(renderTask, "RenderTask", 10000, nullptr, 1 /* priority */, &RenderTaskHandle, 1 /* core */);
 }
 
 void wifiTask(void *params)
@@ -82,6 +84,17 @@ void wifiTask(void *params)
     loopWifiTask();
   }
 }
+
+// void renderTask(void *params)
+// {
+//   Serial.print("renderTask, on core ");
+//   Serial.println(xPortGetCoreID());
+
+//   while (true)
+//   {
+//     loopRenderTask();
+//   }
+// }
 
 void beginWifi()
 {
@@ -123,15 +136,41 @@ void loopWifiTask()
     while (WiFi.status() != WL_CONNECTED)
     {
       Serial.print(".");
-      if (++dots == 20)
+      if (++dots == 10)
       {
         dots = 0;
         Serial.println("");
         Serial.print("Status: ");
-        Serial.println(WiFi.status());
+        switch (WiFi.status())
+        {
+        case WL_NO_SHIELD:
+          Serial.println("WL_NO_SHIELD");
+          break;
+        case WL_IDLE_STATUS:
+          Serial.println("WL_IDLE_STATUS");
+          break;
+        case WL_NO_SSID_AVAIL:
+          Serial.println("WL_NO_SSID_AVAIL");
+          break;
+        case WL_SCAN_COMPLETED:
+          Serial.println("WL_SCAN_COMPLETED");
+          break;
+        case WL_CONNECTED:
+          Serial.println("WL_CONNECTED");
+          break;
+        case WL_CONNECT_FAILED:
+          Serial.println("WL_CONNECT_FAILED");
+          break;
+        case WL_CONNECTION_LOST:
+          Serial.println("WL_CONNECTION_LOST");
+          break;
+        case WL_DISCONNECTED:
+          Serial.println("WL_DISCONNECTED");
+          break;
+        }
         beginWifi();
       }
-      delay(200);
+      vTaskDelay(200);
     }
     Serial.println("");
     Serial.print("Connected to \"");
@@ -177,6 +216,10 @@ void loopWifiTask()
   }
 }
 
+// void loop()
+// {
+// }
+
 void loop()
 {
   switch (state)
@@ -189,6 +232,7 @@ void loop()
 
     break;
   }
+  vTaskDelay(1);
 }
 
 void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *data)
