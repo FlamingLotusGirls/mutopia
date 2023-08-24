@@ -1,6 +1,6 @@
 #include <ArtnetWifi.h>
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
+#include <FastLED.h>
 
 IPAddress ip(192, 168, 0, 200);
 IPAddress gateway(192, 168, 0, 1);
@@ -10,7 +10,9 @@ const char *password = "flgflgflg";
 
 #define STRIP_COUNT 8
 #define UNIV_PERIOD 10
+#define PIXELS_PER_STRIP 720
 #define PIXELS_PER_UNIV 170
+#define BRIGHTNESS 255
 
 #define PIN1 4
 #define PIN2 5
@@ -21,15 +23,7 @@ const char *password = "flgflgflg";
 #define PIN7 7
 #define PIN8 44
 
-Adafruit_NeoPixel strips[] = {
-    Adafruit_NeoPixel(720, PIN1, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(240, PIN2, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(240, PIN3, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(240, PIN4, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(240, PIN5, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(240, PIN6, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(240, PIN7, NEO_RGB + NEO_KHZ800),
-    Adafruit_NeoPixel(240, PIN8, NEO_RGB + NEO_KHZ800)};
+CRGB strips[STRIP_COUNT][PIXELS_PER_STRIP];
 
 ArtnetWifi artnet;
 
@@ -53,34 +47,41 @@ const int INIT_COLORS[] = {
     0xE8689E,
 };
 
-TaskHandle_t Core0Task;
+TaskHandle_t WifiTaskHandle;
 
 void setup()
 {
+  FastLED.addLeds<WS2812, PIN1>(strips[0], PIXELS_PER_STRIP);
+  FastLED.addLeds<WS2812, PIN2>(strips[1], PIXELS_PER_STRIP);
+  FastLED.addLeds<WS2812, PIN3>(strips[2], PIXELS_PER_STRIP);
+  FastLED.addLeds<WS2812, PIN4>(strips[3], PIXELS_PER_STRIP);
+  FastLED.addLeds<WS2812, PIN5>(strips[4], PIXELS_PER_STRIP);
+  FastLED.addLeds<WS2812, PIN6>(strips[5], PIXELS_PER_STRIP);
+  FastLED.addLeds<WS2812, PIN7>(strips[6], PIXELS_PER_STRIP);
+  FastLED.addLeds<WS2812, PIN8>(strips[7], PIXELS_PER_STRIP);
+
   Serial.begin(115200);
   Serial.println("");
   Serial.println("FLG Mutopia LED Node");
-  for (int i = 0; i < STRIP_COUNT; i++)
-  {
-    strips[i].begin();
-  }
 
   Serial.print("setup, on core ");
   Serial.println(xPortGetCoreID());
 
-  // xTaskCreatePinnedToCore(core0Task, "Core0Task", 10000, nullptr, 0, &Core0Task, 0);
+  // Wifi normally runs on core 0, so we are using core 0 to make sure our reading of packets is
+  // synchronous with the ESP32 infra's code that receives packets.
+  xTaskCreatePinnedToCore(wifiTask, "WifiTask", 10000, nullptr, 1 /* priority */, &WifiTaskHandle, 0 /* core */);
 }
 
-// void core0Task(void *params)
-// {
-//   Serial.print("core0Task, on core ");
-//   Serial.println(xPortGetCoreID());
+void wifiTask(void *params)
+{
+  Serial.print("wifiTask, on core ");
+  Serial.println(xPortGetCoreID());
 
-//   while (true)
-//   {
-//     loopCore0();
-//   }
-// }
+  while (true)
+  {
+    loopWifiTask();
+  }
+}
 
 void beginWifi()
 {
@@ -88,7 +89,7 @@ void beginWifi()
   WiFi.config(ip, gateway, subnet);
 }
 
-void loop()
+void loopWifiTask()
 {
   int dots = 0;
   switch (state)
@@ -96,8 +97,8 @@ void loop()
   case INIT:
     for (int i = 0; i < STRIP_COUNT; i++)
     {
-      strips[i].fill(INIT_COLORS[currentInitColor]);
-      strips[i].show();
+      fill_solid(strips[i], PIXELS_PER_STRIP, INIT_COLORS[currentInitColor]);
+      FastLED[i].showLeds(BRIGHTNESS);
     }
 
     delay(500);
@@ -108,8 +109,8 @@ void loop()
       // Navigate to TRY_WIFI state
       for (int i = 0; i < STRIP_COUNT; i++)
       {
-        strips[i].fill(INIT_COLORS[4]);
-        strips[i].show();
+        fill_solid(strips[i], PIXELS_PER_STRIP, INIT_COLORS[4]);
+        FastLED[i].showLeds(BRIGHTNESS);
       }
       state = TRY_WIFI;
     }
@@ -146,21 +147,21 @@ void loop()
     {
       for (int i = 0; i < STRIP_COUNT; i++)
       {
-        strips[i].fill(0xE8689E);
-        strips[i].show();
+        fill_solid(strips[i], PIXELS_PER_STRIP, 0xE8689E);
+        FastLED[i].showLeds(BRIGHTNESS);
       }
       delay(100);
       for (int i = 0; i < STRIP_COUNT; i++)
       {
-        strips[i].fill(0x35081B);
-        strips[i].show();
+        fill_solid(strips[i], PIXELS_PER_STRIP, 0x35081B);
+        FastLED[i].showLeds(BRIGHTNESS);
       }
       delay(100);
     }
     for (int i = 0; i < STRIP_COUNT; i++)
     {
-      strips[i].fill(0x81380E);
-      strips[i].show();
+      fill_solid(strips[i], PIXELS_PER_STRIP, 0x81380E);
+      FastLED[i].showLeds(BRIGHTNESS);
     }
     delay(100);
 
@@ -171,45 +172,24 @@ void loop()
     break;
   case RECEIVE_ARTNET:
     artnet.read();
+    vTaskDelay(1);
     break;
   }
 }
 
-// void loop()
-// {
-//   switch (state)
-//   {
-//   case INIT:
-//     for (int i = 0; i < STRIP_COUNT; i++)
-//     {
-//       strips[i].fill(INIT_COLORS[currentInitColor]);
-//       strips[i].show();
-//     }
+void loop()
+{
+  switch (state)
+  {
+  case RECEIVE_ARTNET:
+    // for (int i = 0; i < STRIP_COUNT; i++)
+    // {
+    FastLED.show();
+    // }
 
-//     delay(500);
-
-//     currentInitColor++;
-//     if (currentInitColor == INIT_COLOR_COUNT)
-//     {
-//       // Navigate to TRY_WIFI state
-//       for (int i = 0; i < STRIP_COUNT; i++)
-//       {
-//         strips[i].fill(INIT_COLORS[4]);
-//         strips[i].show();
-//       }
-//       state = TRY_WIFI;
-//     }
-
-//     break;
-//   case RECEIVE_ARTNET:
-//     for (int i = 0; i < STRIP_COUNT; i++)
-//     {
-//       strips[i].show();
-//     }
-
-//     break;
-//   }
-// }
+    break;
+  }
+}
 
 void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *data)
 {
@@ -247,24 +227,16 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   }
   int stripUniverse = universe % UNIV_PERIOD;
   int startPixel = stripUniverse * PIXELS_PER_UNIV;
-  int stripNumPixels = strips[stripIndex].numPixels();
-  if (startPixel >= stripNumPixels)
+  if (startPixel >= PIXELS_PER_STRIP)
   {
     return;
   }
 
-  if (stripUniverse == 0)
-  {
-    // for (int i = 0; i < STRIP_COUNT; i++)
-    // {
-    strips[stripIndex].show();
-    // }
-  }
   // STORE ARTNET DATA INTO PIXEL COLORS
   // Sometimes the received length isn't a multiple of 3 (e.g. Chromatik seems to always send an
   // even length and pad the buffer with a zero if pixel count is odd).
   int numPixelsReceivedThisFrame = length / 3;
 
-  int numPixelsToCopySafely = min(stripNumPixels - startPixel, numPixelsReceivedThisFrame);
-  memcpy(strips[stripIndex].getPixels() + (startPixel * 3), data, numPixelsToCopySafely * 3);
+  int numPixelsToCopySafely = min(PIXELS_PER_STRIP - startPixel, numPixelsReceivedThisFrame);
+  memcpy(strips[stripIndex] + startPixel, data, numPixelsToCopySafely * 3);
 }
