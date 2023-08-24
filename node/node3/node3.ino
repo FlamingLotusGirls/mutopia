@@ -1,6 +1,6 @@
 #include <ArtnetWifi.h>
 #include <Arduino.h>
-#include <FastLED.h>
+#include <NeoPixelBus.h>
 
 IPAddress ip(192, 168, 0, 200);
 IPAddress gateway(192, 168, 0, 1);
@@ -8,7 +8,7 @@ IPAddress subnet(255, 255, 255, 0);
 const char *ssid = "mutopia";
 const char *password = "flgflgflg";
 
-#define STRIP_COUNT 8
+#define STRIP_COUNT 4
 #define UNIV_PERIOD 10
 #define PIXELS_PER_STRIP 720
 #define PIXELS_PER_UNIV 170
@@ -23,7 +23,16 @@ const char *password = "flgflgflg";
 #define PIN7 7
 #define PIN8 44
 
-CRGB strips[STRIP_COUNT][PIXELS_PER_STRIP];
+// NeoPixelBus<NeoGrbFeature, NeoEsp32I2s1X8Ws2812xMethod> strip(])= {
+NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod> strip1(PIXELS_PER_STRIP, PIN1);
+NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt1Ws2812xMethod> strip2(PIXELS_PER_STRIP, PIN2);
+NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt2Ws2812xMethod> strip3(PIXELS_PER_STRIP, PIN3);
+NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt3Ws2812xMethod> strip4(PIXELS_PER_STRIP, PIN4);
+// NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod> strip5(PIXELS_PER_STRIP, PIN5);
+// NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod> strip6(PIXELS_PER_STRIP, PIN6);
+// NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod> strip7(PIXELS_PER_STRIP, PIN7);
+// NeoPixelBus<NeoGrbFeature, NeoEsp32Rmt0Ws2812xMethod> strip8(PIXELS_PER_STRIP, PIN8);
+// };
 
 ArtnetWifi artnet;
 
@@ -38,28 +47,27 @@ State state = INIT;
 int currentInitColor = 0;
 
 const int INIT_COLOR_COUNT = 6;
-const int INIT_COLORS[] = {
-    0x81380E,
-    0xE38D52,
-    0x2CD3E1,
-    0x3CBD9F,
-    0x005A96,
-    0xE8689E,
+const RgbColor INIT_COLORS[] = {
+    RgbColor(0x81, 0x38, 0x0E),
+    RgbColor(0xE3, 0x8D, 0x52),
+    RgbColor(0x2C, 0xD3, 0xE1),
+    RgbColor(0x3C, 0xBD, 0x9F),
+    RgbColor(0x00, 0x5A, 0x96),
+    RgbColor(0xE8, 0x68, 0x9E),
 };
 
 TaskHandle_t WifiTaskHandle;
 
 void setup()
 {
-  FastLED.addLeds<WS2812, PIN1>(strips[0], PIXELS_PER_STRIP);
-  FastLED.addLeds<WS2812, PIN2>(strips[1], PIXELS_PER_STRIP);
-  FastLED.addLeds<WS2812, PIN3>(strips[2], PIXELS_PER_STRIP);
-  FastLED.addLeds<WS2812, PIN4>(strips[3], PIXELS_PER_STRIP);
-  FastLED.addLeds<WS2812, PIN5>(strips[4], PIXELS_PER_STRIP);
-  FastLED.addLeds<WS2812, PIN6>(strips[5], PIXELS_PER_STRIP);
-  FastLED.addLeds<WS2812, PIN7>(strips[6], PIXELS_PER_STRIP);
-  FastLED.addLeds<WS2812, PIN8>(strips[7], PIXELS_PER_STRIP);
-
+  strip1.Begin();
+  strip2.Begin();
+  strip3.Begin();
+  strip4.Begin();
+  // strip5.Begin();
+  // strip6.Begin();
+  // strip7.Begin();
+  // strip8.Begin();
   Serial.begin(115200);
   Serial.println("");
   Serial.println("FLG Mutopia LED Node");
@@ -95,11 +103,22 @@ void loopWifiTask()
   switch (state)
   {
   case INIT:
-    for (int i = 0; i < STRIP_COUNT; i++)
-    {
-      fill_solid(strips[i], PIXELS_PER_STRIP, INIT_COLORS[currentInitColor]);
-      FastLED[i].showLeds(BRIGHTNESS);
-    }
+    strip1.ClearTo(INIT_COLORS[currentInitColor]);
+    strip2.ClearTo(INIT_COLORS[currentInitColor]);
+    strip3.ClearTo(INIT_COLORS[currentInitColor]);
+    strip4.ClearTo(INIT_COLORS[currentInitColor]);
+    // strip5.ClearTo(INIT_COLORS[currentInitColor]);
+    // strip6.ClearTo(INIT_COLORS[currentInitColor]);
+    // strip7.ClearTo(INIT_COLORS[currentInitColor]);
+    // strip8.ClearTo(INIT_COLORS[currentInitColor]);
+    strip1.Show();
+    strip2.Show();
+    strip3.Show();
+    strip4.Show();
+    // strip5.Show();
+    // strip6.Show();
+    // strip7.Show();
+    // strip8.Show();
 
     delay(500);
 
@@ -107,11 +126,23 @@ void loopWifiTask()
     if (currentInitColor == INIT_COLOR_COUNT)
     {
       // Navigate to TRY_WIFI state
-      for (int i = 0; i < STRIP_COUNT; i++)
-      {
-        fill_solid(strips[i], PIXELS_PER_STRIP, INIT_COLORS[4]);
-        FastLED[i].showLeds(BRIGHTNESS);
-      }
+      strip1.ClearTo(INIT_COLORS[4]);
+      strip2.ClearTo(INIT_COLORS[4]);
+      strip3.ClearTo(INIT_COLORS[4]);
+      strip4.ClearTo(INIT_COLORS[4]);
+      // strip5.ClearTo(INIT_COLORS[4]);
+      // strip6.ClearTo(INIT_COLORS[4]);
+      // strip7.ClearTo(INIT_COLORS[4]);
+      // strip8.ClearTo(INIT_COLORS[4]);
+      strip1.Show();
+      strip2.Show();
+      strip3.Show();
+      strip4.Show();
+      // strip5.Show();
+      // strip6.Show();
+      // strip7.Show();
+      // strip8.Show();
+
       state = TRY_WIFI;
     }
 
@@ -145,24 +176,62 @@ void loopWifiTask()
     // Confirm WiFi connected with pink LED flashes
     for (int j = 3; j > 0; j--)
     {
-      for (int i = 0; i < STRIP_COUNT; i++)
-      {
-        fill_solid(strips[i], PIXELS_PER_STRIP, 0xE8689E);
-        FastLED[i].showLeds(BRIGHTNESS);
-      }
+      strip1.ClearTo(0xE8689E);
+      strip2.ClearTo(0xE8689E);
+      strip3.ClearTo(0xE8689E);
+      strip4.ClearTo(0xE8689E);
+      // strip5.ClearTo(0xE8689E);
+      // strip6.ClearTo(0xE8689E);
+      // strip7.ClearTo(0xE8689E);
+      // strip8.ClearTo(0xE8689E);
+      strip1.Show();
+      strip2.Show();
+      strip3.Show();
+      strip4.Show();
+      // strip5.Show();
+      // strip6.Show();
+      // strip7.Show();
+      // strip8.Show();
+
       delay(100);
-      for (int i = 0; i < STRIP_COUNT; i++)
-      {
-        fill_solid(strips[i], PIXELS_PER_STRIP, 0x35081B);
-        FastLED[i].showLeds(BRIGHTNESS);
-      }
+
+      strip1.ClearTo(0x35081B);
+      strip2.ClearTo(0x35081B);
+      strip3.ClearTo(0x35081B);
+      strip4.ClearTo(0x35081B);
+      // strip5.ClearTo(0x35081B);
+      // strip6.ClearTo(0x35081B);
+      // strip7.ClearTo(0x35081B);
+      // strip8.ClearTo(0x35081B);
+      strip1.Show();
+      strip2.Show();
+      strip3.Show();
+      strip4.Show();
+      // strip5.Show();
+      // strip6.Show();
+      // strip7.Show();
+      // strip8.Show();
+
       delay(100);
     }
-    for (int i = 0; i < STRIP_COUNT; i++)
-    {
-      fill_solid(strips[i], PIXELS_PER_STRIP, 0x81380E);
-      FastLED[i].showLeds(BRIGHTNESS);
-    }
+
+    strip1.ClearTo(0x81380E);
+    strip2.ClearTo(0x81380E);
+    strip3.ClearTo(0x81380E);
+    strip4.ClearTo(0x81380E);
+    // strip5.ClearTo(0x81380E);
+    // strip6.ClearTo(0x81380E);
+    // strip7.ClearTo(0x81380E);
+    // strip8.ClearTo(0x81380E);
+    strip1.Show();
+    strip2.Show();
+    strip3.Show();
+    strip4.Show();
+    // strip5.Show();
+    // strip6.Show();
+    // strip7.Show();
+    // strip8.Show();
+
     delay(100);
 
     // Navigate to RECEIVE_ARTNET state
@@ -182,10 +251,14 @@ void loop()
   switch (state)
   {
   case RECEIVE_ARTNET:
-    // for (int i = 0; i < STRIP_COUNT; i++)
-    // {
-    FastLED.show();
-    // }
+    strip1.Show();
+    strip2.Show();
+    strip3.Show();
+    strip4.Show();
+    // strip5.Show();
+    // strip6.Show();
+    // strip7.Show();
+    // strip8.Show();
 
     break;
   }
@@ -238,5 +311,60 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   int numPixelsReceivedThisFrame = length / 3;
 
   int numPixelsToCopySafely = min(PIXELS_PER_STRIP - startPixel, numPixelsReceivedThisFrame);
-  memcpy(strips[stripIndex] + startPixel, data, numPixelsToCopySafely * 3);
+  uint8_t *pixels;
+  switch (stripIndex)
+  {
+  case 0:
+    pixels = strip1.Pixels();
+    break;
+  case 1:
+    pixels = strip2.Pixels();
+    break;
+  case 2:
+    pixels = strip3.Pixels();
+    break;
+  case 3:
+    pixels = strip4.Pixels();
+    break;
+    // case 4:
+    //   pixels = strip5.Pixels();
+    //   break;
+    // case 5:
+    //   pixels = strip6.Pixels();
+    //   break;
+    // case 6:
+    //   pixels = strip7.Pixels();
+    //   break;
+    // case 7:
+    //   pixels = strip8.Pixels();
+    //   break;
+  }
+  memcpy(pixels + (3 * startPixel), data, numPixelsToCopySafely * 3);
+  switch (stripIndex)
+  {
+  case 0:
+    strip1.Dirty();
+    break;
+  case 1:
+    strip2.Dirty();
+    break;
+  case 2:
+    strip3.Dirty();
+    break;
+  case 3:
+    strip4.Dirty();
+    break;
+    // case 4:
+    //   strip5.Dirty();
+    //   break;
+    // case 5:
+    //   strip6.Dirty();
+    //   break;
+    // case 6:
+    //   strip7.Dirty();
+    //   break;
+    // case 7:
+    //   strip8.Dirty();
+    //   break;
+  }
 }
