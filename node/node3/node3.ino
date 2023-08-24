@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
-IPAddress ip(192, 168, 0, 201);
+IPAddress ip(192, 168, 0, 200);
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 0, 0);
 const char *ssid = "mutopia";
@@ -68,19 +68,19 @@ void setup()
   Serial.print("setup, on core ");
   Serial.println(xPortGetCoreID());
 
-  xTaskCreatePinnedToCore(core0Task, "Core0Task", 10000, nullptr, 0, &Core0Task, 0);
+  // xTaskCreatePinnedToCore(core0Task, "Core0Task", 10000, nullptr, 0, &Core0Task, 0);
 }
 
-void core0Task(void *params)
-{
-  Serial.print("core0Task, on core ");
-  Serial.println(xPortGetCoreID());
+// void core0Task(void *params)
+// {
+//   Serial.print("core0Task, on core ");
+//   Serial.println(xPortGetCoreID());
 
-  while (true)
-  {
-    loopCore0();
-  }
-}
+//   while (true)
+//   {
+//     loopCore0();
+//   }
+// }
 
 void beginWifi()
 {
@@ -88,11 +88,33 @@ void beginWifi()
   WiFi.config(ip, gateway, subnet);
 }
 
-void loopCore0()
+void loop()
 {
   int dots = 0;
   switch (state)
   {
+  case INIT:
+    for (int i = 0; i < STRIP_COUNT; i++)
+    {
+      strips[i].fill(INIT_COLORS[currentInitColor]);
+      strips[i].show();
+    }
+
+    delay(500);
+
+    currentInitColor++;
+    if (currentInitColor == INIT_COLOR_COUNT)
+    {
+      // Navigate to TRY_WIFI state
+      for (int i = 0; i < STRIP_COUNT; i++)
+      {
+        strips[i].fill(INIT_COLORS[4]);
+        strips[i].show();
+      }
+      state = TRY_WIFI;
+    }
+
+    break;
   case TRY_WIFI:
     Serial.print("Searching for WiFi");
     beginWifi();
@@ -153,41 +175,41 @@ void loopCore0()
   }
 }
 
-void loop()
-{
-  switch (state)
-  {
-  case INIT:
-    for (int i = 0; i < STRIP_COUNT; i++)
-    {
-      strips[i].fill(INIT_COLORS[currentInitColor]);
-      strips[i].show();
-    }
+// void loop()
+// {
+//   switch (state)
+//   {
+//   case INIT:
+//     for (int i = 0; i < STRIP_COUNT; i++)
+//     {
+//       strips[i].fill(INIT_COLORS[currentInitColor]);
+//       strips[i].show();
+//     }
 
-    delay(500);
+//     delay(500);
 
-    currentInitColor++;
-    if (currentInitColor == INIT_COLOR_COUNT)
-    {
-      // Navigate to TRY_WIFI state
-      for (int i = 0; i < STRIP_COUNT; i++)
-      {
-        strips[i].fill(INIT_COLORS[4]);
-        strips[i].show();
-      }
-      state = TRY_WIFI;
-    }
+//     currentInitColor++;
+//     if (currentInitColor == INIT_COLOR_COUNT)
+//     {
+//       // Navigate to TRY_WIFI state
+//       for (int i = 0; i < STRIP_COUNT; i++)
+//       {
+//         strips[i].fill(INIT_COLORS[4]);
+//         strips[i].show();
+//       }
+//       state = TRY_WIFI;
+//     }
 
-    break;
-  case RECEIVE_ARTNET:
-    for (int i = 0; i < STRIP_COUNT; i++)
-    {
-      strips[i].show();
-    }
+//     break;
+//   case RECEIVE_ARTNET:
+//     for (int i = 0; i < STRIP_COUNT; i++)
+//     {
+//       strips[i].show();
+//     }
 
-    break;
-  }
-}
+//     break;
+//   }
+// }
 
 void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *data)
 {
@@ -231,6 +253,13 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
     return;
   }
 
+  if (stripUniverse == 0)
+  {
+    // for (int i = 0; i < STRIP_COUNT; i++)
+    // {
+    strips[stripIndex].show();
+    // }
+  }
   // STORE ARTNET DATA INTO PIXEL COLORS
   // Sometimes the received length isn't a multiple of 3 (e.g. Chromatik seems to always send an
   // even length and pad the buffer with a zero if pixel count is odd).
