@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
-IPAddress ip(192, 168, 0, 201);
+IPAddress ip(192, 168, 0, 200);
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 const char *ssid = "mutopia";
@@ -71,7 +71,7 @@ void setup()
   // Wifi normally runs on core 0, so we are using core 0 to make sure our reading of packets is
   // synchronous with the ESP32 infra's code that receives packets.
   xTaskCreatePinnedToCore(wifiTask, "WifiTask", 10000, nullptr, 1 /* priority */, &WifiTaskHandle, 0 /* core */);
-  // xTaskCreatePinnedToCore(renderTask, "RenderTask", 10000, nullptr, 1 /* priority */, &RenderTaskHandle, 1 /* core */);
+  xTaskCreatePinnedToCore(renderTask, "RenderTask", 10000, nullptr, 20 /* priority */, &RenderTaskHandle, 1 /* core */);
 }
 
 void wifiTask(void *params)
@@ -85,16 +85,16 @@ void wifiTask(void *params)
   }
 }
 
-// void renderTask(void *params)
-// {
-//   Serial.print("renderTask, on core ");
-//   Serial.println(xPortGetCoreID());
+void renderTask(void *params)
+{
+  Serial.print("renderTask, on core ");
+  Serial.println(xPortGetCoreID());
 
-//   while (true)
-//   {
-//     loopRenderTask();
-//   }
-// }
+  while (true)
+  {
+    loopRenderTask();
+  }
+}
 
 void beginWifi()
 {
@@ -216,20 +216,16 @@ void loopWifiTask()
   }
 }
 
-// void loop()
-// {
-// }
-
 void loop()
+{
+}
+
+void loopRenderTask()
 {
   switch (state)
   {
   case RECEIVE_ARTNET:
-    // for (int i = 0; i < STRIP_COUNT; i++)
-    // {
     FastLED.show();
-    // }
-
     break;
   }
   vTaskDelay(1);
