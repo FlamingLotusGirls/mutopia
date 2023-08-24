@@ -11,9 +11,9 @@ play_objects = {}
 
 # Configurable settings
 wav_directory = "/home/mutopia/wav"  # Default directory path containing WAV files
-random_idle_time = 60  # Configurable time in seconds before playing random sounds
-min_random_delay = 15  # Minimum delay before playing random sounds in seconds
-max_random_delay = 60  # Maximum delay before playing random sounds in seconds
+random_idle_time = 30  # Configurable time in seconds before playing random sounds
+min_random_delay = 25  # Minimum delay before playing random sounds in seconds
+max_random_delay = 90  # Maximum delay before playing random sounds in seconds
 
 # Lock for handling random sound playback
 random_play_lock = threading.Lock()
@@ -47,12 +47,26 @@ def play_random_sounds():
         if current_time - last_command_time > random_idle_time:
             random_play_lock.acquire()
             random_file = random.choice(list(wav_files.keys()))
+            
+            # Ensure the randomly chosen sound is not an ambient sound
+            while random_file.startswith("FLG_AMB"):
+                random_file = random.choice(list(wav_files.keys()))
+            
             print(f"Playing random sound: {random_file}")
             play_wav(random_file)
             random_play_lock.release()
 
         random_delay = random.randint(min_random_delay, max_random_delay)
         time.sleep(random_delay)
+
+# Function to play ambient sounds at regular intervals
+def play_ambient_sounds():
+    while True:
+        random_ambient = random.choice([file_name for file_name in wav_files if file_name.startswith("FLG_AMB")])
+        print(f"Playing ambient sound: {random_ambient}")
+        wav_obj = wav_files[random_ambient]
+        play_obj = wav_obj.play()
+        play_obj.wait_done()
 
 # UDP packet listener
 def listen_udp():
@@ -100,6 +114,10 @@ def scan_directory(directory):
                 file_name = os.path.basename(file_path)
                 wav_files[file_name] = wave_obj
 
+    print("Loaded WAV files:")
+    for file_name in wav_files:
+        print(file_name)
+
 # Main function
 def main():
     # Scan the directory for WAV files and create objects
@@ -109,6 +127,11 @@ def main():
     random_sound_thread = threading.Thread(target=play_random_sounds)
     random_sound_thread.daemon = True  # Set the thread as a daemon so it doesn't block program exit
     random_sound_thread.start()
+
+    # Start the ambient sound player thread
+    ambient_sound_thread = threading.Thread(target=play_ambient_sounds)
+    ambient_sound_thread.daemon = True  # Set the thread as a daemon so it doesn't block program exit
+    ambient_sound_thread.start()
 
     # Start listening for UDP packets
     listen_udp()
