@@ -1,5 +1,5 @@
 /*
-This example will receive multiple universes via Artnet and control a strip of ws2811 leds via
+This example will receive multiple universes via Artnet and control a strip of ws2811 strip via
 Adafruit's NeoPixel library: https://github.com/adafruit/Adafruit_NeoPixel
 This example may be copied under the terms of the MIT license, see the LICENSE file for details
 */
@@ -12,10 +12,10 @@ const char *ssid = "TP-Link_81DC";
 const char *password = "18585223";
 
 // Neopixel settings
-const int numPixels = 240;
+const int numPixels = 30;
 const int numberOfChannels = numPixels * 3; // Total number of channels you want to receive (1 led = 3 channels)
-const byte dataPin = 10;
-Adafruit_NeoPixel leds = Adafruit_NeoPixel(numPixels, dataPin, NEO_GRB + NEO_KHZ800);
+const byte dataPin = 4;
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(numPixels, dataPin, NEO_GRB + NEO_KHZ800);
 
 // Artnet settings
 ArtnetWifi artnet;
@@ -73,20 +73,20 @@ bool ConnectWifi(void)
 void initTest()
 {
   for (int i = 0; i < numPixels; i++)
-    leds.setPixelColor(i, 127, 0, 0);
-  leds.show();
+    strip.setPixelColor(i, 127, 0, 0);
+  strip.show();
   delay(500);
   for (int i = 0; i < numPixels; i++)
-    leds.setPixelColor(i, 0, 127, 0);
-  leds.show();
+    strip.setPixelColor(i, 0, 127, 0);
+  strip.show();
   delay(500);
   for (int i = 0; i < numPixels; i++)
-    leds.setPixelColor(i, 0, 0, 127);
-  leds.show();
+    strip.setPixelColor(i, 0, 0, 127);
+  strip.show();
   delay(500);
   for (int i = 0; i < numPixels; i++)
-    leds.setPixelColor(i, 0, 0, 0);
-  leds.show();
+    strip.setPixelColor(i, 0, 0, 0);
+  strip.show();
 }
 
 void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *data)
@@ -124,8 +124,8 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   // set brightness of the whole strip
   if (universe == 15)
   {
-    leds.setBrightness(data[0]);
-    leds.show();
+    strip.setBrightness(data[0]);
+    strip.show();
   }
 
   // Store which universe has got in
@@ -147,13 +147,13 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   {
     int led = i + (universe - startUniverse) * (previousDataLength / 3);
     if (led < numPixels)
-      leds.setPixelColor(led, data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
+      strip.setPixelColor(led, data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
   }
   previousDataLength = length;
 
   if (sendFrame)
   {
-    leds.show();
+    strip.show();
     // Reset universeReceived to 0
     memset(universesReceived, 0, maxUniverses);
   }
@@ -167,17 +167,17 @@ void setup()
     for (int j = 0; j < 5; j++)
     {
       for (int i = 0; i < numPixels; i++)
-        leds.setPixelColor(i, 127, 0, 0);
-      leds.show();
+        strip.setPixelColor(i, 127, 0, 0);
+      strip.show();
       delay(100);
       for (int i = 0; i < numPixels; i++)
-        leds.setPixelColor(i, 0, 0, 0);
-      leds.show();
+        strip.setPixelColor(i, 0, 0, 0);
+      strip.show();
       delay(100);
     }
   }
   artnet.begin();
-  leds.begin();
+  strip.begin();
   initTest();
 
   // this will be called for each packet received
