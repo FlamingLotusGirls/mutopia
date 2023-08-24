@@ -4,7 +4,7 @@
 
 IPAddress ip(192, 168, 0, 200);
 IPAddress gateway(192, 168, 0, 1);
-IPAddress subnet(255, 255, 0, 0);
+IPAddress subnet(255, 255, 255, 0);
 const char *ssid = "mutopia";
 const char *password = "flgflgflg";
 
