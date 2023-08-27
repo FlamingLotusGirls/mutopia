@@ -53,8 +53,6 @@ const int INIT_COLORS[] = {
     0xE8689E,
 };
 
-TaskHandle_t Core0Task;
-
 void setup()
 {
   Serial.begin(115200);
@@ -64,23 +62,7 @@ void setup()
   {
     strips[i].begin();
   }
-
-  Serial.print("setup, on core ");
-  Serial.println(xPortGetCoreID());
-
-  // xTaskCreatePinnedToCore(core0Task, "Core0Task", 10000, nullptr, 0, &Core0Task, 0);
 }
-
-// void core0Task(void *params)
-// {
-//   Serial.print("core0Task, on core ");
-//   Serial.println(xPortGetCoreID());
-
-//   while (true)
-//   {
-//     loopCore0();
-//   }
-// }
 
 void beginWifi()
 {
@@ -206,42 +188,6 @@ void loop()
   }
 }
 
-// void loopCore0()
-// {
-//   switch (state)
-//   {
-//   case INIT:
-//     for (int i = 0; i < STRIP_COUNT; i++)
-//     {
-//       strips[i].fill(INIT_COLORS[currentInitColor]);
-//       strips[i].show();
-//     }
-
-//     delay(500);
-
-//     currentInitColor++;
-//     if (currentInitColor == INIT_COLOR_COUNT)
-//     {
-//       // Navigate to TRY_WIFI state
-//       for (int i = 0; i < STRIP_COUNT; i++)
-//       {
-//         strips[i].fill(INIT_COLORS[4]);
-//         strips[i].show();
-//       }
-//       state = TRY_WIFI;
-//     }
-
-//     break;
-//   case RECEIVE_ARTNET:
-//     for (int i = 0; i < STRIP_COUNT; i++)
-//     {
-//       strips[i].show();
-//     }
-
-//     break;
-//   }
-// }
-
 void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *data)
 {
   // Serial.print("DMX: Univ: ");
@@ -286,11 +232,9 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
 
   if (stripUniverse == 0)
   {
-    // for (int i = 0; i < STRIP_COUNT; i++)
-    // {
     strips[stripIndex].show();
-    // }
   }
+
   // STORE ARTNET DATA INTO PIXEL COLORS
   // Sometimes the received length isn't a multiple of 3 (e.g. Chromatik seems to always send an
   // even length and pad the buffer with a zero if pixel count is odd).
@@ -334,8 +278,8 @@ void renderIdlePattern()
 
 // // PERLIN NOISE // //
 
-// using the algorithm from http://freespace.virgin.net/hugo.elias/models/m_perlin.html
-//  thanks to hugo elias
+// Copied from https://forum.arduino.cc/t/perlin-noise-generator/7099, and fixed compiler error
+
 float Noise2(float x, float y)
 {
   long noise;
