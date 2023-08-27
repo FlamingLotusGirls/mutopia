@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
-IPAddress ip(192, 168, 0, 200);
+IPAddress ip(192, 168, 0, 201);
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 const char *ssid = "mutopia";
@@ -170,7 +170,12 @@ void loopWifiTask()
         }
         beginWifi();
       }
-      vTaskDelay(200);
+
+      for (int i = 0; i < 25; i++)
+      {
+        renderIdlePattern();
+        delay(8);
+      }
     }
     Serial.println("");
     Serial.print("Connected to \"");
@@ -280,3 +285,115 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *d
   int numPixelsToCopySafely = min(PIXELS_PER_STRIP - startPixel, numPixelsReceivedThisFrame);
   memcpy(strips[stripIndex] + startPixel, data, numPixelsToCopySafely * 3);
 }
+
+#define MIN_HUE_NORM (1 / 6)
+#define MAX_HUE_NORM 1
+#define HUE_SPREAD_NORM (MAX_HUE_NORM - MIN_HUE_NORM) / 2
+#define HUE_CENTER_NORM (MIN_HUE_NORM + HUE_SPREAD_NORM)
+const float hueCenterU16 = HUE_CENTER_NORM * 65536;
+const float hueSpreadU16 = HUE_SPREAD_NORM * 65536;
+
+void renderIdlePattern()
+{
+  int deciseconds = millis() / 100;
+  for (int stripIndex = 0; stripIndex < STRIP_COUNT; stripIndex++)
+  {
+    Adafruit_NeoPixel &strip = strips[stripIndex];
+    int stripNumPixels = strip.numPixels();
+    for (int pixelIndex = 0; pixelIndex < stripNumPixels; pixelIndex++)
+    {
+      int adjustedPixelIndex = pixelIndex + 100 * stripIndex;
+      // noise is -1 to 1
+      float hueNoise = PerlinNoise2(deciseconds /* x */, adjustedPixelIndex /* y */, 0.25 /* persistence */, 3 /* octaves */);
+      float satNoise = PerlinNoise2(deciseconds /* x */, adjustedPixelIndex / 10 /* y */, 0.25 /* persistence */, 3 /* octaves */);
+      float valNoise = PerlinNoise2(deciseconds /* x */, adjustedPixelIndex / 13 /* y */, 0.25 /* persistence */, 3 /* octaves */);
+
+      float hueU16 = hueNoise * hueSpreadU16 + hueCenterU16;
+      float satU8 = satNoise * 75 + 180;
+      float valU8 = valNoise * 75 + 180;
+
+      strip.setPixelColor(pixelIndex, Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::ColorHSV(hueU16, satU8, valU8)));
+    }
+    strip.show();
+  }
+}
+
+// // PERLIN NOISE // //
+
+// using the algorithm from http://freespace.virgin.net/hugo.elias/models/m_perlin.html
+//  thanks to hugo elias
+float Noise2(float x, float y)
+{
+  long noise;
+  noise = x + y * 57;
+  noise = pow(noise << 13, noise);
+  return (1.0 - (long(noise * (noise * noise * 15731L + 789221L) + 1376312589L) & 0x7fffffff) / 1073741824.0);
+}
+
+float SmoothNoise2(float x, float y)
+{
+  float corners, sides, center;
+  corners = (Noise2(x - 1, y - 1) + Noise2(x + 1, y - 1) + Noise2(x - 1, y + 1) + Noise2(x + 1, y + 1)) / 16;
+  sides = (Noise2(x - 1, y) + Noise2(x + 1, y) + Noise2(x, y - 1) + Noise2(x, y + 1)) / 8;
+  center = Noise2(x, y) / 4;
+  return (corners + sides + center);
+}
+
+float InterpolatedNoise2(float x, float y)
+{
+  float v1, v2, v3, v4, i1, i2, fractionX, fractionY;
+  long longX, longY;
+
+  longX = long(x);
+  fractionX = x - longX;
+
+  longY = long(y);
+  fractionY = y - longY;
+
+  v1 = SmoothNoise2(longX, longY);
+  v2 = SmoothNoise2(longX + 1, longY);
+  v3 = SmoothNoise2(longX, longY + 1);
+  v4 = SmoothNoise2(longX + 1, longY + 1);
+
+  i1 = Interpolate(v1, v2, fractionX);
+  i2 = Interpolate(v3, v4, fractionX);
+
+  return (Interpolate(i1, i2, fractionY));
+}
+
+float Interpolate(float a, float b, float x)
+{
+  // cosine interpolations
+  return (CosineInterpolate(a, b, x));
+}
+
+float LinearInterpolate(float a, float b, float x)
+{
+  return (a * (1 - x) + b * x);
+}
+
+float CosineInterpolate(float a, float b, float x)
+{
+  float ft = x * 3.1415927;
+  float f = (1 - cos(ft)) * .5;
+
+  return (a * (1 - f) + b * f);
+}
+
+float PerlinNoise2(float x, float y, float persistence, int octaves)
+{
+  float frequency, amplitude;
+  float total = 0.0;
+
+  for (int i = 0; i <= octaves - 1; i++)
+  {
+    frequency = pow(2, i);
+    amplitude = pow(persistence, i);
+
+    total = total + InterpolatedNoise2(x * frequency, y * frequency) * amplitude;
+  }
+
+  return (total);
+}
+
+// // END PERLIN NOISE // //
